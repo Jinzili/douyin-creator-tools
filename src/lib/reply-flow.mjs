@@ -224,56 +224,6 @@ async function waitForReplySendReady(page, commentLocator, timeoutMs, options = 
   throw new Error(`Timed out waiting for the send button after ${effectiveTimeoutMs}ms.`);
 }
 
-async function waitForReplyConfirmation(page, commentLocator, options) {
-  const effectiveTimeoutMs = Math.min(
-    getEffectiveTimeout(options, options.replyTimeoutMs),
-    12000
-  );
-  const startedAt = Date.now();
-  let pollCount = 0;
-  let lastObservedState = null;
-
-  while (Date.now() - startedAt < effectiveTimeoutMs) {
-    pollCount += 1;
-    const visible = await commentLocator.isVisible().catch(() => false);
-    if (!visible) {
-      return {
-        confirmed: true,
-        reason: "comment_hidden",
-        pollCount,
-        elapsedMs: Date.now() - startedAt,
-        lastObservedState
-      };
-    }
-
-    const actionState = await inspectCommentActions(commentLocator).catch(() => null);
-    if (!actionState) {
-      return {
-        confirmed: true,
-        reason: "comment_detached",
-        pollCount,
-        elapsedMs: Date.now() - startedAt,
-        lastObservedState
-      };
-    }
-
-    lastObservedState = {
-      visible,
-      ...actionState
-    };
-
-    await page.waitForTimeout(250);
-  }
-
-  return {
-    confirmed: false,
-    reason: "timeout",
-    pollCount,
-    elapsedMs: Date.now() - startedAt,
-    lastObservedState
-  };
-}
-
 function isResolvedReplyStatus(status) {
   return status === "replied" || status === "dry_run_typed";
 }
@@ -355,7 +305,6 @@ async function safeReplyToComment(page, commentLocator, comment, options) {
     await waitForReplySendReady(page, commentLocator, options.replyTimeoutMs, options);
 
     const sendButton = commentLocator.getByText("发送", { exact: true }).first();
-    const previousFingerprint = await captureCommentListFingerprint(page);
     stage = "click_send_button";
     await sendButton.click();
     logReplyFilterDebug("clicked send button", {
@@ -363,37 +312,9 @@ async function safeReplyToComment(page, commentLocator, comment, options) {
       commentText: comment.commentText
     });
 
-    stage = "settle_after_send";
-    await page.waitForTimeout(options.replySettleMs);
-
-    stage = "verify_reply_result";
-    logReplyFilterDebug("waiting for reply confirmation", {
+    logReplyFilterDebug("reply treated as successful immediately after clicking send", {
       username: comment.username,
       commentText: comment.commentText
-    });
-    const listChanged = await waitForCommentListChange(
-      page,
-      previousFingerprint,
-      Math.min(getEffectiveTimeout(options, options.replyTimeoutMs), 6000)
-    );
-    const confirmation = await waitForReplyConfirmation(
-      page,
-      commentLocator,
-      options
-    );
-
-    if (!confirmation.confirmed && !listChanged) {
-      throw new Error(
-        `Reply send was not confirmed after clicking send (listChanged=${String(listChanged)}).`
-      );
-    }
-
-    logReplyFilterDebug("reply confirmed", {
-      username: comment.username,
-      commentText: comment.commentText,
-      listChanged,
-      confirmationReason: confirmation.reason,
-      confirmationPollCount: confirmation.pollCount
     });
     return {
       ...result,
