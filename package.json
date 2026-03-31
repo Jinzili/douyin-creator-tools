@@ -9,6 +9,7 @@
     "works": "node ./src/list-douyin-works.mjs",
     "comments:export": "node ./src/export-douyin-comments.mjs",
     "comments:reply": "node ./src/reply-douyin-comments.mjs",
+    "comments:publish": "node ./src/publish-comment.mjs",
     "article:publish": "node ./src/publish-douyin-article.mjs"
   },
   "dependencies": {

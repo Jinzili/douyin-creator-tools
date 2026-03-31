@@ -7,7 +7,7 @@ export const DEFAULT_COMMENT_PAGE_URL =
   "https://creator.douyin.com/creator-micro/interactive/comment";
 export const DEFAULT_USER_DATA_DIR = path.resolve(".playwright/douyin-profile");
 
-const DEFAULT_VIEWPORT = { width: 1440, height: 1200 };
+const DEFAULT_VIEWPORT = { width: 1280, height: 900 };
 
 export async function promptForEnter(message) {
   const terminal = readline.createInterface({
